@@ -1,26 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="franka_combined">
-
-
-        <!-- Name for this robot -->
-    <xacro:arg name="arm_id" default="fr3" />
-
-    <!-- Should a franka_gripper be mounted at the flange?" -->
-    <xacro:arg name="hand" default="false" />
-    <!-- Positional offset between $(arm_id)_hand -> $(arm_id)_hand_tcp [m]. Only used when hand:=true -->
-    <xacro:arg name="tcp_xyz" default="0 0 0.1034" />
-    <!-- Rotational offset between $(arm_id)_hand -> $(arm_id)_hand_tcp [rad]. Only used when hand:=true -->
-    <xacro:arg name="tcp_rpy" default="0 0 0" />
-
-    <!-- Is the robot being simulated in gazebo?" -->
-    <xacro:arg name="gazebo" default="false" />
-    <!-- If `gazebo` arg is set, to which frame shall $(arm_id)_link0 be parented. Empty string for not fixing at all -->
-    <xacro:arg name="parent" default="world" />
-    <!-- If `gazebo` arg is set and `parent` not empty, what position offset between `parent` & $(arm_id)_link0 -->
-    <xacro:arg name="xyz" default="0 0 0" />
-    <!-- If `gazebo` arg is set and `parent` not empty, what rotation offset between `parent` & $(arm_id)_link0 -->
-    <xacro:arg name="rpy" default="0 0 0" />
-  <xacro:macro name="franka_robot" params="arm_id joint_limits parent:='world' xyz:='0 0 0' rpy:='0 0 0' hand:=false gazebo:=false tcp_xyz:='0 0 0.1034' tcp_rpy='0 0 0'">
+  <xacro:macro name="franka_robot" params="arm_id joint_limits parent:='world' xyz:='0 0 0' rpy:='0 0 0' gazebo:=false tcp_xyz:='0 0 0.1034' tcp_rpy='0 0 0'">
 
     <!-- Include Franka utils and arm -->
     <xacro:include filename="$(find franka_description)/robots/common/utils.xacro" />
@@ -87,15 +67,59 @@
       <origin xyz="0 0 0.105" rpy="0 0 0"/>
     </joint>
 
-  </xacro:macro>
+    <!-- Define additional Gazebo tags -->
+    <xacro:if value="${gazebo}">
 
-      <xacro:franka_robot arm_id="$(arg arm_id)"
-                      joint_limits="${xacro.load_yaml('$(find franka_description)/robots/fr3/joint_limits.yaml')}"
-                      tcp_xyz="$(arg tcp_xyz)"
-                      tcp_rpy="$(arg tcp_rpy)"
-                      gazebo="$(arg gazebo)"
-                      parent="$(arg parent)"
-                      xyz="$(arg xyz)"
-                      rpy="$(arg rpy)">
-  </xacro:franka_robot>
+      <xacro:if value="${parent != ''}">
+        <!-- Gazebo requires a joint to a link called "world" for statically mounted robots -->
+        <xacro:if value="${parent == 'world'}">
+          <link name="${parent}" />
+        </xacro:if>
+        <joint name="${parent}_joint" type="fixed">
+          <origin xyz="${xyz}" rpy="${rpy}" />
+          <parent link="${parent}" />
+          <child  link="${arm_id}_link0" />
+        </joint>
+      </xacro:if>
+
+      <xacro:gazebo-joint joint="${arm_id}_joint1" transmission="hardware_interface/PositionJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint2" transmission="hardware_interface/PositionJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint3" transmission="hardware_interface/PositionJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint4" transmission="hardware_interface/PositionJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint5" transmission="hardware_interface/PositionJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint6" transmission="hardware_interface/PositionJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint7" transmission="hardware_interface/PositionJointInterface" />
+
+      <xacro:gazebo-joint joint="${arm_id}_joint1" transmission="hardware_interface/VelocityJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint2" transmission="hardware_interface/VelocityJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint3" transmission="hardware_interface/VelocityJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint4" transmission="hardware_interface/VelocityJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint5" transmission="hardware_interface/VelocityJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint6" transmission="hardware_interface/VelocityJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint7" transmission="hardware_interface/VelocityJointInterface" />
+
+      <xacro:gazebo-joint joint="${arm_id}_joint1" transmission="hardware_interface/EffortJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint2" transmission="hardware_interface/EffortJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint3" transmission="hardware_interface/EffortJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint4" transmission="hardware_interface/EffortJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint5" transmission="hardware_interface/EffortJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint6" transmission="hardware_interface/EffortJointInterface" />
+      <xacro:gazebo-joint joint="${arm_id}_joint7" transmission="hardware_interface/EffortJointInterface" />
+
+      <xacro:transmission-franka-state arm_id="${arm_id}" />
+      <xacro:transmission-franka-model arm_id="${arm_id}"
+         root="${arm_id}_joint1"
+         tip="${arm_id}_joint8"
+       />
+
+      <gazebo>
+        <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+          <controlPeriod>0.001</controlPeriod>
+          <robotSimType>franka_gazebo/FrankaHWSim</robotSimType>
+        </plugin>
+        <self_collide>true</self_collide>
+      </gazebo>
+    </xacro:if>
+
+  </xacro:macro>
 </robot>
