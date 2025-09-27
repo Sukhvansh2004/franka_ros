@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="franka_combined">
+
+
+        <!-- Name for this robot -->
+    <xacro:arg name="arm_id" default="fr3" />
+
+    <!-- Should a franka_gripper be mounted at the flange?" -->
+    <xacro:arg name="hand" default="false" />
+    <!-- Positional offset between $(arm_id)_hand -> $(arm_id)_hand_tcp [m]. Only used when hand:=true -->
+    <xacro:arg name="tcp_xyz" default="0 0 0.1034" />
+    <!-- Rotational offset between $(arm_id)_hand -> $(arm_id)_hand_tcp [rad]. Only used when hand:=true -->
+    <xacro:arg name="tcp_rpy" default="0 0 0" />
+
+    <!-- Is the robot being simulated in gazebo?" -->
+    <xacro:arg name="gazebo" default="false" />
+    <!-- If `gazebo` arg is set, to which frame shall $(arm_id)_link0 be parented. Empty string for not fixing at all -->
+    <xacro:arg name="parent" default="world" />
+    <!-- If `gazebo` arg is set and `parent` not empty, what position offset between `parent` & $(arm_id)_link0 -->
+    <xacro:arg name="xyz" default="0 0 0" />
+    <!-- If `gazebo` arg is set and `parent` not empty, what rotation offset between `parent` & $(arm_id)_link0 -->
+    <xacro:arg name="rpy" default="0 0 0" />
+  <xacro:macro name="franka_robot" params="arm_id joint_limits parent:='world' xyz:='0 0 0' rpy:='0 0 0' hand:=false gazebo:=false tcp_xyz:='0 0 0.1034' tcp_rpy='0 0 0'">
+
+    <!-- Include Franka utils and arm -->
+    <xacro:include filename="$(find franka_description)/robots/common/utils.xacro" />
+    <xacro:include filename="$(find franka_description)/robots/common/franka_arm.xacro" />
+
+    <!-- Create the robot arm -->
+    <xacro:franka_arm arm_id="${arm_id}" safety_distance="0.03" gazebo="${gazebo}" joint_limits="${joint_limits}"/>
+
+    <!-- Cobot Pump End Effector -->
+    <!-- Fixed Joint from Arm to Pump -->
+    <joint name="${arm_id}_cobot_pump_joint" type="fixed">
+      <parent link="${arm_id}_link8"/>
+      <child link="${arm_id}_cobot_pump"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- EE Main Link -->
+    <link name="${arm_id}_cobot_pump">
+      <visual name="${arm_id}_cobot_pump_visual">
+        <geometry>
+          <mesh filename="package://franka_description/meshes/robot_ee/cobot_pump/visual/cobot_pump.dae"/>
+        </geometry>
+      </visual>
+      <collision name="${arm_id}_cobot_pump_collision">
+        <geometry>
+          <mesh filename="package://franka_description/meshes/robot_ee/cobot_pump/collision/cobot_pump.stl"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0.063" rpy="0 0 0"/>
+        <mass value="1.01"/>
+        <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+      </inertial>
+    </link>
+
+    <!-- Optional Self-Collision Link -->
+    <link name="${arm_id}_cobot_pump_sc">
+      <collision name="${arm_id}_cobot_pump_sc_capsule1">
+        <origin xyz="0 0 0.04" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${0.04 + 0.03}" length="0.1"/>
+        </geometry>
+      </collision>
+      <collision name="${arm_id}_cobot_pump_sc_capsule2">
+        <origin xyz="0 0 0.10" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${0.02 + 0.03}" length="0.1"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Joint connecting self-collision geometry -->
+    <joint name="${arm_id}_cobot_pump_sc_joint" type="fixed">
+      <parent link="${arm_id}_cobot_pump"/>
+      <child link="${arm_id}_cobot_pump_sc"/>
+      <origin rpy="0 0 0"/>
+    </joint>
+
+    <!-- TCP Link -->
+    <link name="${arm_id}_cobot_pump_tcp"/>
+    <joint name="${arm_id}_cobot_pump_tcp_joint" type="fixed">
+      <parent link="${arm_id}_cobot_pump"/>
+      <child link="${arm_id}_cobot_pump_tcp"/>
+      <origin xyz="0 0 0.105" rpy="0 0 0"/>
+    </joint>
+
+  </xacro:macro>
+
+      <xacro:franka_robot arm_id="$(arg arm_id)"
+                      joint_limits="${xacro.load_yaml('$(find franka_description)/robots/fr3/joint_limits.yaml')}"
+                      tcp_xyz="$(arg tcp_xyz)"
+                      tcp_rpy="$(arg tcp_rpy)"
+                      gazebo="$(arg gazebo)"
+                      parent="$(arg parent)"
+                      xyz="$(arg xyz)"
+                      rpy="$(arg rpy)">
+  </xacro:franka_robot>
+</robot>
