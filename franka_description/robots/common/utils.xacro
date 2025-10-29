@@ -210,6 +210,18 @@
     </transmission>
   </xacro:macro>
 
+  <xacro:macro name="transmission-franka-pose" params="arm_id:=panda ee_joint:=panda_joint8">
+    <transmission name="${arm_id}_franka_pose_cartesian">
+      <type>franka_hw/FrankaPoseCartesianInterface</type>
+      <joint name="${ee_joint}">
+        <hardwareInterface>franka_hw/FrankaPoseCartesianInterface</hardwareInterface>
+      </joint>
+      <actuator name="${ee_joint}_actuator">
+        <hardwareInterface>franka_hw/FrankaPoseCartesianInterface</hardwareInterface>
+      </actuator>
+    </transmission>
+  </xacro:macro>
+
   <xacro:macro name="inertia-cylinder" params="mass radius h">
     <inertial>
       <mass value="${mass}" />
