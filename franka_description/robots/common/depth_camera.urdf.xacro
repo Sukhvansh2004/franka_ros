@@ -1,0 +1,79 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="depth_camera" params="connected_to arm_id">
+    <link name="${arm_id}_camera_link">
+      <visual>
+        <geometry>
+          <box size="0.025 0.09 0.025"/>
+        </geometry>
+        <material name="red">
+          <color rgba="1 0 0 1"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="0.025 0.09 0.025"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.095"/>
+        <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+      </inertial>
+    </link>
+
+    <joint name="${arm_id}_camera_joint" type="fixed">
+      <parent link="${connected_to}"/>
+      <child link="${arm_id}_camera_link"/>
+      
+      <origin xyz="0 0 0" rpy="${pi} ${-pi/2} 0"/>
+      
+    </joint>
+
+    <link name="${arm_id}_camera_depth_frame"/>
+
+    <joint name="${arm_id}_camera_depth_joint" type="fixed">
+      <parent link="${arm_id}_camera_link"/>
+      <child link="${arm_id}_camera_depth_frame"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+
+    <link name="${arm_id}_camera_color_frame"/>
+
+    <joint name="${arm_id}_camera_color_joint" type="fixed">
+      <parent link="${arm_id}_camera_link"/>
+      <child link="${arm_id}_camera_color_frame"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+
+    <gazebo reference="${arm_id}_camera_link">
+      <sensor type="depth" name="${arm_id}_camera">
+        <always_on>true</always_on>
+        <update_rate>30.0</update_rate>
+        <camera name="${arm_id}_camera">
+          <horizontal_fov>${87 * pi / 180.0}</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>10.0</far>
+          </clip>
+        </camera>
+        <plugin name="${arm_id}_camera_controller" filename="libgazebo_ros_openni_kinect.so">
+          <baseline>0.2</baseline>
+          <pointCloud>true</pointCloud>
+          <pointCloudCutoff>0.1</pointCloudCutoff>
+          <pointCloudCutoffMax>10.0</pointCloudCutoffMax>
+          <frameName>${arm_id}_camera_depth_frame</frameName>
+          <cameraName>${arm_id}_camera</cameraName>
+          <imageTopicName>color/image_raw</imageTopicName>
+          <depthImageTopicName>depth/image_raw</depthImageTopicName>
+          <pointCloudTopicName>depth/points</pointCloudTopicName>
+          <cameraInfoTopicName>color/camera_info</cameraInfoTopicName>
+          <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+        </plugin>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

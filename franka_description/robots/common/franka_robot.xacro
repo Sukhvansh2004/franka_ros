@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="franka_robot" params="arm_id joint_limits parent:='world' xyz:='0 0 0' rpy:='0 0 0' hand:=false gazebo:=false tcp_xyz:='0 0 0.1034' tcp_rpy='0 0 0'">
+  <xacro:macro name="franka_robot" params="arm_id joint_limits parent:='world' xyz:='0 0 0' rpy:='0 0 0' hand:=false gazebo:=false camera:=true tcp_xyz:='0 0 0.1034' tcp_rpy='0 0 0'">
 
     <xacro:include filename="$(find franka_description)/robots/common/utils.xacro" />
     <xacro:include filename="$(find franka_description)/robots/common/franka_arm.xacro" />
@@ -59,10 +59,21 @@
       <xacro:gazebo-joint joint="${arm_id}_joint6" transmission="hardware_interface/EffortJointInterface" />
       <xacro:gazebo-joint joint="${arm_id}_joint7" transmission="hardware_interface/EffortJointInterface" />
 
+    <xacro:if value="${camera}">
+      <link name="${arm_id}_camera_link_fix"/>
+      <joint name="${arm_id}_camera_joint_fix" type="fixed">
+        <parent link="${arm_id}_link7"/>
+        <child link="${arm_id}_camera_link_fix"/>
+        <origin xyz="0.05 0.0 0.1159" rpy="0 0 ${-pi/4}"/>
+      </joint>
+      <xacro:include filename="$(find franka_description)/robots/common/depth_camera.urdf.xacro" />
+      <xacro:depth_camera arm_id="${arm_id}" connected_to="${arm_id}_camera_link_fix" />
+    </xacro:if>
+
       <xacro:transmission-franka-state arm_id="${arm_id}" />
       <xacro:transmission-franka-model arm_id="${arm_id}"
-         root="${arm_id}_joint1"
-         tip="${arm_id}_joint8"
+        root="${arm_id}_joint1"
+        tip="${arm_id}_joint8"
        />
 
       <xacro:transmission-franka-pose arm_id="${arm_id}" ee_joint="${arm_id}_joint8" />
