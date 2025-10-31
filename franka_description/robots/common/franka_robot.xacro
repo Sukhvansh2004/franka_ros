@@ -64,10 +64,10 @@
       <joint name="${arm_id}_camera_joint_fix" type="fixed">
         <parent link="${arm_id}_link7"/>
         <child link="${arm_id}_camera_link_fix"/>
-        <origin xyz="0.05 0.0 0.1159" rpy="0 0 ${-pi/4}"/>
+        <origin xyz="0 0 0" rpy="0 0 ${-pi/4}"/>
       </joint>
       <xacro:include filename="$(find franka_description)/robots/common/depth_camera.urdf.xacro" />
-      <xacro:depth_camera arm_id="${arm_id}" connected_to="${arm_id}_camera_link_fix" />
+      <xacro:depth_camera arm_id="${arm_id}" connected_to="${arm_id}_camera_link_fix" pos="0.033 0.0 0.15"/>
     </xacro:if>
 
       <xacro:transmission-franka-state arm_id="${arm_id}" />

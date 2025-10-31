@@ -1,5 +1,5 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="depth_camera" params="connected_to arm_id">
+  <xacro:macro name="depth_camera" params="connected_to arm_id pos:='0 0 0' rpy:='${pi} ${-pi/2} 0'">
     <link name="${arm_id}_camera_link">
       <visual>
         <geometry>
@@ -24,7 +24,7 @@
       <parent link="${connected_to}"/>
       <child link="${arm_id}_camera_link"/>
       
-      <origin xyz="0 0 0" rpy="${pi} ${-pi/2} 0"/>
+      <origin xyz="${pos}" rpy="${rpy}"/>
       
     </joint>
 
