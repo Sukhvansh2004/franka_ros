@@ -10,18 +10,80 @@ from visualization_msgs.msg import InteractiveMarker, \
     InteractiveMarkerControl
 from geometry_msgs.msg import PoseStamped
 from franka_msgs.msg import FrankaState
+from tf.transformations import quaternion_matrix, translation_matrix, inverse_matrix
+from scipy.linalg import logm
+import copy
 
+prev_marker_pose = None
 marker_pose = PoseStamped()
 pose_pub = None
 # [[min_x, max_x], [min_y, max_y], [min_z, max_z]]
 position_limits = [[-0.6, 0.6], [-0.6, 0.6], [0.05, 0.9]]
 
+SE3_TOLERANCE = 0.001  
+
+def msg_to_matrix(pose_msg):
+    """Converts geometry_msgs/Pose to a 4x4 numpy transformation matrix."""
+    t = [pose_msg.position.x, pose_msg.position.y, pose_msg.position.z]
+    q = [pose_msg.orientation.x, pose_msg.orientation.y, pose_msg.orientation.z, pose_msg.orientation.w]
+    
+    T_trans = translation_matrix(t)
+    T_rot = quaternion_matrix(q)
+    
+    # Combine rotation and translation
+    return np.dot(T_trans, T_rot)
+
+def get_se3_error_norm(T_prev, T_curr):
+    """
+    Calculates the norm of the Lie Algebra error (twist magnitude).
+    T_err = T_prev^-1 * T_curr
+    error = || log(T_err) ||
+    """
+    # 1. Calculate relative transform
+    T_prev_inv = inverse_matrix(T_prev)
+    T_rel = np.dot(T_prev_inv, T_curr)
+    
+    # 2. Compute the Matrix Logarithm to get to se(3)
+    # logm returns a complex matrix usually, but for SE(3) real inputs 
+    # the result should be real (ignoring numerical noise)
+    se3_matrix = np.real(logm(T_rel))
+    
+    # 3. Vee operator: Extract the 6D twist vector from the 4x4 skew-symmetric matrix
+    # The structure of se(3) matrix is:
+    # [ [0, -wz, wy, vx],
+    #   [wz, 0, -wx, vy],
+    #   [-wy, wx, 0, vz],
+    #   [0,  0,  0,  1 ] ]
+    
+    vx = se3_matrix[0, 3]
+    vy = se3_matrix[1, 3]
+    vz = se3_matrix[2, 3]
+    wx = se3_matrix[2, 1]
+    wy = se3_matrix[0, 2]
+    wz = se3_matrix[1, 0]
+    
+    twist = np.array([vx, vy, vz, wx, wy, wz])
+    
+    # 4. Return the Euclidean norm of the twist
+    return np.linalg.norm(twist)
 
 def publisher_callback(msg, link_name):
+    global prev_marker_pose, marker_pose
+
     marker_pose.header.frame_id = link_name
     marker_pose.header.stamp = rospy.Time(0)
-    pose_pub.publish(marker_pose)
 
+    # Convert ROS messages to 4x4 Matrices
+    T_curr = msg_to_matrix(marker_pose.pose)
+    T_prev = msg_to_matrix(prev_marker_pose.pose)
+
+    # Calculate SE(3) error on the Lie Algebra
+    error_magnitude = get_se3_error_norm(T_prev, T_curr)
+
+    # Check tolerance and publish
+    if error_magnitude > SE3_TOLERANCE:
+        pose_pub.publish(marker_pose)
+        prev_marker_pose = copy.deepcopy(marker_pose)
 
 def process_feedback(feedback):
     if feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
@@ -39,6 +101,8 @@ def process_feedback(feedback):
 
 
 def wait_for_initial_pose():
+    global marker_pose, prev_marker_pose
+
     msg = rospy.wait_for_message("franka_state_controller/franka_states",
                                  FrankaState)  # type: FrankaState
 
@@ -56,6 +120,7 @@ def wait_for_initial_pose():
     marker_pose.pose.position.y = msg.O_T_EE[13]
     marker_pose.pose.position.z = msg.O_T_EE[14]
 
+    prev_marker_pose = copy.deepcopy(marker_pose)
 
 if __name__ == "__main__":
     rospy.init_node("equilibrium_pose_node")
